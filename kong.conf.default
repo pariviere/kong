@@ -242,6 +242,16 @@
                          # This setting has no effect if `role` is not set to
                          # `control_plane`.
 
+#cluster_data_plane_purge_delay = 1209600
+                         # How many seconds must pass from the time a DP node
+                         # becomes offline to the time it's entry gets removed
+                         # from the database.
+                         #
+                         # This is to prevent the cluster data plane table from
+                         # growing indefinitely. The default is set to
+                         # 14 days. That is, if CP haven't heard from a DP for
+                         # 14 days, it's entry will be removed.
+
 #------------------------------------------------------------------------------
 # NGINX
 #------------------------------------------------------------------------------
