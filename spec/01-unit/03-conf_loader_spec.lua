@@ -1010,24 +1010,24 @@ describe("Configuration loader", function()
   end)
 
   describe("clustering properties", function()
-    it("cluster_status_ttl is accepted", function()
+    it("cluster_data_plane_purge_delay is accepted", function()
       local conf = assert(conf_loader(nil, {
-        cluster_status_ttl = 100,
+        cluster_data_plane_purge_delay = 100,
       }))
-      assert.equal(100, conf.cluster_status_ttl)
+      assert.equal(100, conf.cluster_data_plane_purge_delay)
 
       conf = assert(conf_loader(nil, {
-        cluster_status_ttl = 60,
+        cluster_data_plane_purge_delay = 60,
       }))
-      assert.equal(60, conf.cluster_status_ttl)
+      assert.equal(60, conf.cluster_data_plane_purge_delay)
     end)
 
-    it("cluster_status_ttl < 60 is rejected", function()
+    it("cluster_data_plane_purge_delay < 60 is rejected", function()
       local conf, err = conf_loader(nil, {
-        cluster_status_ttl = 59,
+        cluster_data_plane_purge_delay = 59,
       })
       assert.is_nil(conf)
-      assert.equal("cluster_status_ttl must be 60 or greater", err)
+      assert.equal("cluster_data_plane_purge_delay must be 60 or greater", err)
     end)
   end)
 
