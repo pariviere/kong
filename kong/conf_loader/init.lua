@@ -11,11 +11,55 @@ local tablex = require "pl.tablex"
 local utils = require "kong.tools.utils"
 local log = require "kong.cmd.utils.log"
 local env = require "kong.cmd.utils.env"
-local ip = require "resty.mediador.ip"
+local ipmatcher = require "resty.ipmatcher"
 
 
+local string = string
 local fmt = string.format
+local type = type
 local concat = table.concat
+local tonumber = tonumber
+
+
+local function is_valid_ip_or_cidr(ip_or_cidr)
+  if type(ip_or_cidr) ~= "string" then
+    return false
+  end
+
+  if ipmatcher.parse_ipv4(ip_or_cidr)
+  or ipmatcher.parse_ipv6(ip_or_cidr)
+  then
+    return true
+  end
+
+  local p = string.find(ip_or_cidr, "/", 1, true)
+  if not p then
+    return false
+  end
+
+  local block = tonumber(string.sub(ip_or_cidr, p + 1), 10)
+  if not block then
+    return false
+  end
+
+  local ip = string.sub(ip_or_cidr, 1, p - 1)
+  if ipmatcher.parse_ipv4(ip) then
+    for i = 0, 32 do
+      if block == i then
+        return true
+      end
+    end
+
+  elseif ipmatcher.parse_ipv6(ip) then
+    for i = 0, 128 do
+      if block == i then
+        return true
+      end
+    end
+  end
+
+  return false
+end
 
 
 -- Version 5: https://wiki.mozilla.org/Security/Server_Side_TLS
@@ -865,7 +909,7 @@ local function check_and_infer(conf, opts)
 
   -- checking the trusted ips
   for _, address in ipairs(conf.trusted_ips) do
-    if not ip.valid(address) and address ~= "unix:" then
+    if not is_valid_ip_or_cidr(address) and address ~= "unix:" then
       errors[#errors + 1] = "trusted_ips must be a comma separated list in " ..
                             "the form of IPv4 or IPv6 address or CIDR "      ..
                             "block or 'unix:', got '" .. address .. "'"
