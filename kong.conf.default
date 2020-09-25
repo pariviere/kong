@@ -244,7 +244,7 @@
 
 #cluster_data_plane_purge_delay = 1209600
                          # How many seconds must pass from the time a DP node
-                         # becomes offline to the time it's entry gets removed
+                         # becomes offline to the time its entry gets removed
                          # from the database, as returned by the
                          # /clustering/data_planes Admin API endpoint.
                          #
