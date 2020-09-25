@@ -113,6 +113,15 @@ describe("Plugin: jwt (parser)", function()
       }, fixtures.es256_private_key, 'ES256')
       assert.truthy(token)
     end)
+
+    it("should encode using ES384", function()
+      local token = jwt_parser.encode({
+        sub   = "5656565656",
+        name  = "Jane Doe",
+        admin = true
+      }, fixtures.es384_private_key, 'ES384')
+      assert.truthy(token)
+    end)
   end)
   describe("Decoding", function()
     it("throws an error if not given a string", function()
