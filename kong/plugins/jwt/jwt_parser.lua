@@ -383,6 +383,46 @@ function _M:verify_registered_claims(claims_to_verify)
   return errors == nil, errors
 end
 
+--- Validate a scope claim against list of possibilities
+-- @param scopes_claim name of the claim used as scope
+-- @param scopes_required list of requirements for the scope value
+-- @return A Boolean indicating true if the scope are valid
+function _M:validate_scopes(scopes_claim, scopes_required)
+  local claim_raw= self.claims[scopes_claim]
+  local claim_values = {}
+  local claim
+
+  -- claim can be express as
+  -- a single space separated string
+  -- or a table of string
+  if type(claim_raw) == "table" then
+    claim = table.concat(claim_raw, ' ')
+  else
+    claim = claim_raw
+  end
+
+
+  for _, scope_requirement in ipairs(scopes_required) do
+    local matches = false
+    local scope_requirement_type = type(scope_requirement)
+
+    if scope_requirement_type == "string" and scope_requirement:find(',') then
+      matches, _ = claim_has_requirements(claim, split(scope_requirement, ','))
+    else
+      matches, _ = claim_has_requirements(claim, scope_requirement)
+    end
+
+    if (matches) then
+      -- First match win
+      return matches, {}
+    end
+  end
+
+  local errors
+  errors = add_error(errors, scopes_claim, "has no match")
+
+  return false, errors
+end
 
 --- Check that the maximum allowed expiration is not reached
 -- @param maximum_expiration of the claim
