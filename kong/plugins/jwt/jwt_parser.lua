@@ -58,6 +58,19 @@ local alg_sign = {
     assert(#r == 32)
     assert(#s == 32)
     return r .. s
+  end,
+  ES384 = function(data, key)
+    local pkey = openssl_pkey.new(key)
+    local digest = openssl_digest.new("sha384")
+    assert(digest:update(data))
+    local signature = assert(pkey:sign(digest))
+
+    local derSequence = asn_sequence.parse_simple_sequence(signature)
+    local r = asn_sequence.unsign_integer(derSequence[1], 48)
+    local s = asn_sequence.unsign_integer(derSequence[2], 48)
+    assert(#r == 48)
+    assert(#s == 48)
+    return r .. s
   end
 }
 
@@ -90,6 +103,17 @@ local alg_verify = {
     asn[2] = asn_sequence.resign_integer(sub(signature, 33, 64))
     local signatureAsn = asn_sequence.create_simple_sequence(asn)
     local digest = openssl_digest.new("sha256")
+    assert(digest:update(data))
+    return pkey:verify(signatureAsn, digest)
+  end,
+  ES384 = function(data, signature, key)
+    local pkey, _ = openssl_pkey.new(key)
+    assert(#signature == 96, "Signature must be 96 bytes.")
+    local asn = {}
+    asn[1] = asn_sequence.resign_integer(sub(signature, 1, 48))
+    asn[2] = asn_sequence.resign_integer(sub(signature, 49, 96))
+    local signatureAsn = asn_sequence.create_simple_sequence(asn)
+    local digest = openssl_digest.new("sha384")
     assert(digest:update(data))
     return pkey:verify(signatureAsn, digest)
   end
@@ -223,6 +247,48 @@ local function encode_token(data, key, alg, header)
   segments[#segments+1] = base64_encode(signature)
 
   return concat(segments, ".")
+end
+
+
+--- Verify the claim requirements
+-- @param claim_raw claim value
+-- @param requirement list of requirements : can be a plain string, a comma-separated string or a table
+-- @return A Boolean indicating true if the scope are valid
+-- @return A Table listing the matched requirements
+local function claim_has_requirements(claim_raw, requirement)
+  local requirement_type = type(requirement)
+
+  if requirement_type == 'string' then
+    local all = true
+    local matches = {}
+
+    for word in requirement:gmatch("%w+") do
+      local match = claim_raw:find(word) ~= nil
+      if match then
+        table.insert(matches, word)
+      end
+      all = all and match
+    end
+    return all, matches
+  end
+
+  if requirement_type  == 'table' then
+    local any = false
+    local matches = {}
+
+    for _, item in pairs(requirement) do
+      local hasMatch, local_matches = claim_has_requirements(claim_raw, item)
+      any = any or hasMatch
+      if hasMatch then
+        for _, local_match in ipairs(local_matches) do
+          table.insert(matches, local_match)
+        end
+      end
+    end
+    return any, matches
+  end
+
+  return false, {}
 end
 
 
@@ -368,24 +434,22 @@ function _M:validate_scopes(scopes_claim, scopes_required)
 
   for _, scope_requirement in ipairs(scopes_required) do
     local matches
+    local filtered_scopes
     local scope_requirement_type = type(scope_requirement)
 
     if scope_requirement_type == "string" and scope_requirement:find(',') then
-      matches, _ = claim_has_requirements(claim, split(scope_requirement, ','))
+      matches, filtered_scopes = claim_has_requirements(claim, split(scope_requirement, ','))
     else
-      matches, _ = claim_has_requirements(claim, scope_requirement)
+      matches, filtered_scopes = claim_has_requirements(claim, scope_requirement)
     end
 
     if (matches) then
       -- First match win
-      return matches, {}
+      return matches, filtered_scopes
     end
   end
 
-  local errors = {}
-  errors = add_error(errors, scopes_claim, "has no match")
-
-  return false, errors
+  return false, {}
 end
 
 --- Check that the maximum allowed expiration is not reached

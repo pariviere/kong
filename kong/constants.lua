@@ -82,6 +82,7 @@ return {
     RATELIMIT_REMAINING = "X-RateLimit-Remaining",
     CONSUMER_GROUPS = "X-Consumer-Groups",
     AUTHENTICATED_GROUPS = "X-Authenticated-Groups",
+    VALIDATED_SCOPES = "X-Validated-Scopes",
     FORWARDED_HOST = "X-Forwarded-Host",
     FORWARDED_PREFIX = "X-Forwarded-Prefix",
     ANONYMOUS = "X-Anonymous-Consumer",
