@@ -10,6 +10,7 @@ local openssl_digest = require "resty.openssl.digest"
 local openssl_hmac = require "resty.openssl.hmac"
 local openssl_pkey = require "resty.openssl.pkey"
 local asn_sequence = require "kong.plugins.jwt.asn_sequence"
+local utils = require "kong.tools.utils"
 
 
 local rep = string.rep
@@ -29,6 +30,7 @@ local setmetatable = setmetatable
 local getmetatable = getmetatable
 local encode_base64 = ngx.encode_base64
 local decode_base64 = ngx.decode_base64
+local split = utils.split
 
 
 --- Supported algorithms for signing tokens.
@@ -273,8 +275,10 @@ local function claim_has_requirements(claim_raw, requirement)
     local all = true
     local matches = {}
 
-    for word in requirement:gmatch("%w+") do
-      local match = claim_raw:find(word) ~= nil
+    for word in requirement:gmatch("[%w%p]+") do
+      -- activate plain text matching
+      -- to avoid interpretation of lua magic characters
+      local match = claim_raw:find(word, 0, true) ~= nil
       if match then
         table.insert(matches, word)
       end
